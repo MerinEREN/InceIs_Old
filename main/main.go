@@ -21,13 +21,13 @@ const (
 )
 
 var (
-	templates = template.Must(template.ParseGlob("../templates/*.gohtml"))
+	templates = template.Must(template.ParseGlob("../templates/*.html"))
 	index     = renderTemplate("index")
-	logIn     = renderTemplate("logIn")
-	signUp    = renderTemplate("signUp")
+	// logIn     = renderTemplate("logIn")
+	signUp = renderTemplate("signUp")
 
 	// CHANGE THE REGEXP BELOW !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	validPath = regexp.MustCompile("^/(|logIn|signUp)$")
+	validPath = regexp.MustCompile("^/(|signUp)$")
 )
 
 // OO Language and Page Sturcts
@@ -77,7 +77,7 @@ type Page struct {
 
 // USE THIS TO GET PAGE CONTENTS FOR EVERY LANG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 func loadPage(title string) (*Page, error) {
-	filename := title + ".gohtml"
+	filename := title + ".html"
 	body, err := ioutil.ReadFile("../templates/" + filename)
 	if err != nil {
 		return nil, err
@@ -100,12 +100,15 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", makeHandler(indexHandler))
-	mux.HandleFunc("/logIn", makeHandler(logInHandler))
 	mux.HandleFunc("/signUp", makeHandler(signUpHandler))
-	/* if mux.PostForm("/logIn", data); err != nil {
+	/* if http.PostForm("/logIn", data); err != nil {
 		http.Err(w, "Internal server error while login",
 			http.StatusBadRequest)
 	} */
+	fs := http.FileServer(http.Dir("pubic"))
+	mux.Handle("css/", fs)
+	mux.Handle("img/", fs)
+	mux.Handle("js/", fs)
 	log.Printf("About to listen on 10443. " +
 		"Go to https://192.168.1.100:10443/ " +
 		"or https://localhost:10443/")
@@ -310,7 +313,7 @@ func signUpTemp(c *mgo.Collection) {
 	if err != nil {
 		// Send response !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		fmt.Printf("Insert account error, because can't verify email. Error: %v\n",
-		err)
+			err)
 		return
 	}
 	if accountCount != 0 {
@@ -348,10 +351,10 @@ func signUpTemp(c *mgo.Collection) {
 
 func renderTemplate(title string) func(w http.ResponseWriter, p *Page) {
 	return func(w http.ResponseWriter, p *Page) {
-		err := templates.ExecuteTemplate(w, title+".gohtml", p)
+		err := templates.ExecuteTemplate(w, title+".html", p)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			// maybe log.Fatal(err) or http.Redirect(w, r, "/logIn/", 
+			// maybe log.Fatal(err) or http.Redirect(w, r, "/logIn/",
 			// http.StatusFound)
 		}
 	}
@@ -361,7 +364,7 @@ func renderTemplate(title string) func(w http.ResponseWriter, p *Page) {
 func indexHandler(w http.ResponseWriter, r *http.Request, s string) {
 	// w.Header().Set("Content-Type", "text/plain")
 	// w.Write([]byte("This is Main page " + s + "\n"))
-	fmt.Printf("index s is %s", s)
+	// fmt.Printf("index s is %s", s)
 	s = "index"
 	p, err := loadPage(s)
 	if err != nil {
@@ -369,9 +372,15 @@ func indexHandler(w http.ResponseWriter, r *http.Request, s string) {
 		return
 	}
 	index(w, p)
+	key := "email"
+	email := r.FormValue(key)
+	key = "password"
+	password := r.FormValue(key)
+	// QUERY DB, CHECK AND SEND RESPONSE
+	// fmt.Printf("Email: %s\n Password: %s\n", email, password)
 }
 
-func logInHandler(w http.ResponseWriter, r *http.Request, s string) {
+/* func logInHandler(w http.ResponseWriter, r *http.Request, s string) {
 	// w.Header().Set("Content-Type", "text/plain")
 	// w.Write([]byte("This is Log In page " + s + "\n"))
 	fmt.Printf("logIn s is %s", s)
@@ -381,7 +390,7 @@ func logInHandler(w http.ResponseWriter, r *http.Request, s string) {
 		return
 	}
 	logIn(w, p)
-}
+} */
 
 func signUpHandler(w http.ResponseWriter, r *http.Request, s string) {
 	// w.Header().Set("Content-Type", "text/plain")
