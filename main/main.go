@@ -312,9 +312,9 @@ func logInHandler(w http.ResponseWriter, r *http.Request, c *mgo.Collection, s s
 	renderLogIn(w, p)
 	if r.Method == "POST" {
 		key := "email"
-		email := r.FormValue(key)
+		email := r.PostFormValue(key)
 		key = "password"
-		password := r.FormValue(key)
+		password := r.PostFormValue(key)
 		fmt.Fprintf(w, "Login Email: %s\n Login Password: %s\n", email, password)
 		acc, err := verifyUser(c, email, password)
 		switch err {
@@ -427,7 +427,7 @@ func createAccount(w http.ResponseWriter, r *http.Request, c *mgo.Collection,
 			http.Redirect(w, r, "/", 304) // status code could be wrong
 		}
 		// ALLWAYS CREATE COOKIE BEFORE EXECUTING TEMPLATE
-		defer createCookie(w, r, "session", u4.String())
+		createCookie(w, r, "session", u4.String())
 		http.Redirect(w, r, "https://192.168.1.100:10443/accounts/"+
 			strconv.Itoa(acc.Name), 302)
 	case ExistingEmail:
@@ -479,7 +479,6 @@ func createCookie(w http.ResponseWriter, r *http.Request, s string, uuid string)
 			// ADDING USER DATA TO A COOKIE
 			// WITH NO WAY OF KNOWING WHETER OR NOT THEY MIGHT HAVE ALTERED
 			// THAT DATA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			// ONLY STORE AND USE UUID ON COOKIE IF U WANT !!!!!!!!!!!!!!!!!!!!
 			// HMAC WOULD ALLOW US TO DETERMINE WHETHER OR NOT THE DATA IN THE
 			// COOKIE WAS ALTERED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			// HOWEVER, BEST TO STORE USER DATA ON THE SERVER AND KEEP
@@ -523,7 +522,11 @@ func createCookie(w http.ResponseWriter, r *http.Request, s string, uuid string)
 			log.Printf("%s cookie unmarshaling error. %v\n", cookie.Name, err)
 		}
 		log.Printf("Returned cookie data is %v", returnedCookieData)
-		// DELETE CORRUPTED COOKIE AND CREATE NEW ONE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		// DID NOT CHECKED DELETING AND CREATING NEW COOKIE YET, SO CHECK THEM !!!!
+		// DELETING CORRUPTED COOKIE AND CREATING NEW ONE !!!!!!!!!!!!!!!!!!!!!!!!!
+		cookie.MaxAge = -1 // Deleting cookie
+		createCookie(w, r, s, uuid)
+		return
 	}
 	count, err := strconv.Atoi(xs[2])
 	if err != nil {
