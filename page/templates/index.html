@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>InceIs</title>
+</head>
+<body>
+	<h1>{{.Title}}</h1>
+	<img src="img/MKA.jpg"/>
+	<!-- Use "multipart/form-data" encoding type to upload files -->
+	<form method="post" enctype="multipart/form-data">
+		<input name="uploadedFile" type="file">
+		<input type="submit">
+	</form>
+	<a href="/logIn">Login</a>
+</body>
+</html>
