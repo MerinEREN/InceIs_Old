@@ -6,11 +6,16 @@
 </head>
 <body>
 	<h1>{{.Title}}</h1>
-	<form method="post">
-		<input name="email" type="text">
-		<input name="password" type="password">
-		<input type="submit">
-	</form>
-	<a href="/signUp">Sign Up</a>
+	<div align="center">
+		<img src="{{.ProfilePic}}" style="width: 13%">
+		<form method="post">
+			<ul style="list-style-type: none">
+				<li><input name="email" type="text" value="{{.Form.Email}}"></li>
+				<li><input name="password" type="password"></li>
+				<li><input type="submit"></li>
+				</li>
+		</form>
+		<a href="/signUp">Sign Up</a>
+	</div>
 </body>
 </html>

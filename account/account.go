@@ -1,282 +1,143 @@
 package account
 
 import (
-	"errors"
-	"fmt"
-	"github.com/MerinEREN/InceIs/cookie"
-	valid "github.com/asaskevich/govalidator"
-	"github.com/nu7hatch/gouuid"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
-	"log"
+	// "fmt"
+	"google.golang.org/appengine"
+	// "github.com/MerinEREN/InceIs/cookie"
+	usr "github.com/MerinEREN/InceIs/user"
+	// valid "github.com/asaskevich/govalidator"
+	// "google.golang.org/appengine/user"
+	// "github.com/nu7hatch/gouuid"
+	"google.golang.org/appengine/datastore"
+	// "log"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-var (
-	EmailNotExist   = errors.New("Invalid Email")
-	ExistingEmail   = errors.New("Existing Email")
-	InvalidPassword = errors.New("Invalid Password")
-)
+type Accounts []Account
 
-// II DB Structs
-// Accounts collection
-type Accounts []account
-
-type account struct {
-	Name          string    `bson:"name,omitempty"`
-	Type          string    `bson:"type,omitempty"`
-	CurrentStatus string    `bson:"current_status,omitempty"`
-	AccountStatus string    `bson:"account_status,omitempty"`
-	About         string    `bson:"about,omitempty"`
-	Tags          Tags      `bson:"tags,omitempty"`
-	Ranks         Ranks     `bson:"ranks,omitempty"`
-	Card          card      `bson:"card,omitempty" valid:"creditcard"`
-	Users         Users     `bson:"users,omitempty"`
-	Registered    time.Time `bson:"registered,omitempty"`
-	LastModified  time.Time `bson:"last_modified,omitempty"`
+type Account struct {
+	Name          string    `datastore: "" json:"name"`
+	Company       Company   `datastore: "" json:"company"`
+	CurrentStatus string    `datastore: "" json:"current_status"`
+	AccountStatus string    `datastore: "" json:"account_status"`
+	About         string    `datastore: "" json:"about"`
+	Tags          Tags      `datastore: "" json:"tags"`
+	Ranks         Ranks     `datastore: "" json:"ranks"`
+	Card          Card      `datastore: "" json:"card" valid:"creditCard"`
+	Users         usr.Users `datastore: "-" json:"users"`
+	Registered    time.Time `datastore: "" json:"registered"`
+	LastModified  time.Time `datastore: "" json:"last_modified"`
 }
 
-type company struct {
-	Name    string  `bson:"name,omitempty"`
-	Address address `bson:"address,omitempty"`
+type Company struct {
+	Name    string  `datastore: "" json:"name"`
+	Type    string  `datastore: "" json:"type"`
+	Address Address `datastore: "" json:"address"`
 }
 
-type address struct {
-	Description string      `bson:"description,omitempty"`
-	Borough     string      `bson:"borough,omitempty"`
-	City        string      `bson:"city,omitempty"`
-	Country     string      `bson:"country,omitempty"`
-	Postcode    string      `bson:"postcode,omitempty"`
-	Geolocation geolocation `bson:"geolocation,omitempty"`
+type Address struct {
+	Description string      `datastore: "" json:"description"`
+	Borough     string      `datastore: "" json:"borough"`
+	City        string      `datastore: "" json:"city"`
+	Country     string      `datastore: "" json:"country"`
+	Postcode    string      `datastore: "" json:"postcode"`
+	Geolocation Geolocation `datastore: "" json:"geolocation"`
 }
 
-type geolocation struct {
-	Lat  string `bson:"lat,omitempty"`  // type could be differnt !!!
-	Long string `bson:"Long,omitempty"` // type could be differnt !!!
+type Geolocation struct {
+	Lat  string `datastore: "" json:"lat"`  // type could be differnt !!!
+	Long string `datastore: "" json:"Long"` // type could be differnt !!!
 }
 
-type Tags []tag
+type Tags []Tag
 
-type tag struct {
-	Type string `bson:"type,omitempty"`
+type Tag struct {
+	Value string `datastore: "" json:"value"`
 }
 
-type Ranks []rank
+type Ranks []Rank
 
-type rank struct {
-	Type string `bson:"type,omitempty"`
+type Rank struct {
+	Value string `datastore: "" json:"value"`
 }
 
-type card struct {
-	Creditcards Creditcards `bson:"creditcards,omitempty"`
-	Debitcards  Debitcards  `bson:"debitcards,omitempty"`
+type Card struct {
+	CreditCards CreditCards `datastore: "" json:"creditCards"`
+	DebitCards  DebitCards  `datastore: "" json:"debitCards"`
 }
 
-type Creditcards []creditcard
+type CreditCards []CreditCard
 
-type creditcard struct {
-	HolderName string `bson:"holder_name,omitempty"`
-	No         string `bson:"no,omitempty"`
-	ExpMonth   string `bson:"exp_month,omitempty"`
-	ExpYear    string `bson:"exp_year,omitempty"`
-	CVV        string `bson:"cvv,omitempty"`
+type CreditCard struct {
+	HolderName string `datastore: "" json:"holder_name"`
+	No         string `datastore: "" json:"no"`
+	ExpMonth   string `datastore: "" json:"exp_month"`
+	ExpYear    string `datastore: "" json:"exp_year"`
+	CVV        string `datastore: "" json:"cvv"`
 }
 
-type Debitcards []debitcard
+type DebitCards []DebitCard
 
-type debitcard struct {
-	HolderName string `bson:"holder_name,omitempty"`
-	No         string `bson:"no,omitempty"`
-	ExpMonth   string `bson:"exp_month,omitempty"`
-	ExpYear    string `bson:"exp_year,omitempty"`
-	CVV        string `bson:"cvv,omitempty"`
+type DebitCard struct {
+	HolderName string `datastore: "" json:"holder_name"`
+	No         string `datastore: "" json:"no"`
+	ExpMonth   string `datastore: "" json:"exp_month"`
+	ExpYear    string `datastore: "" json:"exp_year"`
+	CVV        string `datastore: "" json:"cvv"`
 }
 
-type Users []user
-
-type user struct {
-	UUID        string `bson:"uuid"`
-	Email       string `bson:"email,omitempty"`
-	Password    string `bson:"password,omitempty"`
-	PicturePath string `bson:"picture_path,omitempty"`
-	Name        name   `bson:"name,omitempty"`
-	Phone       string `bson:"phone,omitempty"` // Should be struct in
-	// the future !!!
-	Status       string       `bson:"status,omitempty"`
-	Type         string       `bson:"type,omitempty"`
-	BirthDate    time.Time    `bson:"birth_date,omitempty"`
-	Registered   time.Time    `bson:"registered,omitempty"`
-	LastModified time.Time    `bson:"last_modified,omitempty"`
-	IsActive     bool         `bson:"is_active,omitempty"`
-	ServicePacks ServicePacks `bson:"service_packs",omitempty"`
-	// 	PurchasedServices PurchasedServices `bson:"purchasedServices,
-	// 	omitempty"`
-}
-
-type name struct {
-	First string `bson:"first,omitempty"`
-	Last  string `bson:"last,omitempty"`
-}
-
-type ServicePacks []servicePack
-
-type servicePack struct {
-	Id             string            `bson:"id,omitempty"`
-	Type           string            `bson:"type,omitempty"`
-	Description    string            `bson:"description,omitempty"`
-	Duration       string            `bson:"duration,omitempty"`
-	Price          price             `bson:"price,omitempty"`
-	Extras         ServicePackExtras `bson:"extras,omitempty"`
-	Photos         Photos            `bson:"photos,omitempty"`
-	Videos         Videos            `bson:"videos,omitempty"`
-	Tags           Tags              `bson:"tags,omitempty"`
-	Created        time.Time         `bson:"created,omitempty"`
-	LastModified   time.Time         `bson:"last_modified,omitempty"`
-	Status         string            `bson:"status,omitempty"`
-	Evaluation     evaluation        `bson:"evaluation,omitempty"`
-	CustomerReview string            `bson:"customer_review,omitempty"`
-}
-
-type price struct {
-	Amount   float64 `bson:amount,omitempty"`
-	Currency string  `bson:currency,omitempty"`
-}
-
-type ServicePackExtras []servicePackOption
-
-type servicePackOption struct {
-	Id          string `bson:"id,omitempty"`
-	Description string `bson:"description,omitempty"`
-	Duration    string `bson:"duration,omitempty"`
-	Price       price  `bson:"price,omitempty"`
-	Photos      Photos `bson:"photos,omitempty"`
-	Videos      Videos `bson:"videos,omitempty"`
-}
-
-type Photos []photo
-
-type photo struct {
-	Id           string    `bson:"id,omitempty"`
-	Path         string    `bson:"path,omitempty"`
-	Title        string    `bson:"title,omitempty"`
-	Description  string    `bson:"description,omitempty"`
-	Uploaded     time.Time `bson:"uploaded,omitempty"`
-	LastModified time.Time `bson:"last_modified,omitempty"`
-	Status       string    `bson:"status,omitempty"`
-}
-
-type Videos []video
-
-type video struct {
-	Id           string    `bson:"id,omitempty"`
-	Path         string    `bson:"path,omitempty"`
-	Title        string    `bson:"title,omitempty"`
-	Description  string    `bson:"description,omitempty"`
-	Uploaded     time.Time `bson:"uploaded,omitempty"`
-	LastModified time.Time `bson:"last_modified,omitempty"`
-	Status       string    `bson:"status,omitempty"`
-}
-
-type evaluation struct {
-	Technical     int
-	Timing        int
-	Communication int
-}
-
-type doc interface {
+type Doc interface {
 	// Use this for all structs
 	// Update()
 	// Upsert()
 	// Delete()
 }
 
-func Create(w http.ResponseWriter, r *http.Request, c *mgo.Collection,
-	email, password string) {
+func Create(r *http.Request) (acc *Account, u *usr.User, err error) {
+	/* k = "password"
+	password := r.PostFormValue(k)
 	if !valid.IsEmail(email) {
-		// Inform client
-		fmt.Fprintln(w, "Invalid email")
+		err = usr.InvalidEmail
 		return
-	}
-	// Cahange this control and allow special characters !!!!!!!!!!!!!!!!!!
-	if !valid.IsAlphanumeric(password) {
-		// Inform client
-		fmt.Fprintln(w, "Invalid password")
+	} */
+	// CAHANGE THIS CONTROL AND ALLOW SPECIAL CHARACTERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	/* if !valid.IsAlphanumeric(password) {
+		err = usr.InvalidPassword
 		return
-	}
-	acc, err := VerifyUser(c, email, password)
-	switch err {
-	case EmailNotExist:
-		u4, errUUID := uuid.NewV4()
-		if errUUID != nil {
-			// status code could be wrong
-			http.Error(w, errUUID.Error(), http.StatusNotImplemented)
-			log.Fatalf("Can't create UUID when signUp, error: %v\n",
-				errUUID)
-		}
-		users := Users{
-			user{
-				UUID:         u4.String(),
-				Email:        email,
-				Password:     password,
-				Status:       "online",
-				Type:         "admin",
-				IsActive:     true,
-				Registered:   time.Now(),
-				LastModified: time.Now(),
-			},
-		}
-		accCount, errCount := c.Find(bson.M{}).Count()
-		accCount++
-		if errCount != nil {
-			// status code could be wrong
-			http.Error(w, errCount.Error(), http.StatusNotImplemented)
-			log.Fatalln(errCount)
-		}
-		acc = &account{
-			Name:          "Account_" + strconv.Itoa(accCount),
-			CurrentStatus: "available",
-			AccountStatus: "online",
-			Users:         users,
-			Registered:    time.Now(),
-			LastModified:  time.Now(),
-		}
-		errInsert := c.Insert(acc)
-		if errInsert != nil {
-			// status code could be wrong
-			http.Error(w, errInsert.Error(), http.StatusNotImplemented)
-			log.Fatalln(errInsert)
-		}
-		cookie.Create(w, r, "session", u4.String())
-		http.Redirect(w, r, "/accounts/"+acc.Name, 302)
-	case ExistingEmail:
-		fmt.Fprintln(w, err)
-	case InvalidPassword:
-		fmt.Fprintln(w, err)
-	default:
-		// status code could be wrong
-		http.Error(w, err.Error(), http.StatusNotImplemented)
-		log.Fatalln(err)
-	}
-}
-
-func VerifyUser(c *mgo.Collection, e, p string) (result *account, err error) {
-	// CHECK THIS QUERY, IT IS WRONG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	err = c.Find(bson.M{"users.email": e}).One(&result)
+	} */
+	ctx := appengine.NewContext(r)
+	q := datastore.NewQuery("Accounts")
+	var accCount int
+	accCount, err = q.Count(ctx)
 	if err != nil {
-		if err.Error() == "not found" {
-			err = EmailNotExist
-		} else {
-			return
-		}
-	} else {
-		err = ExistingEmail
-		for _, user := range result.Users {
-			if user.Password != p {
-				err = InvalidPassword
-			}
-		}
+		return
+	}
+	accCount++
+	acc = &Account{
+		Name:          "Account_" + strconv.Itoa(accCount),
+		CurrentStatus: "available",
+		AccountStatus: "online",
+		Registered:    time.Now(),
+		LastModified:  time.Now(),
+	}
+	key := datastore.NewIncompleteKey(ctx, "Accounts", nil)
+	// fmt.Println(key)
+	var parentKey *datastore.Key
+	parentKey, err = datastore.Put(ctx, key, acc)
+	// fmt.Println(parentKey)
+	if err != nil {
+		return
+	}
+	u, err = usr.Add(r, parentKey)
+	if err != nil {
+		// DELETE CREATED ACCOUNT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		return
 	}
 	return
 }
+
+/* func AddTags(s ...string) bool {
+	return
+} */

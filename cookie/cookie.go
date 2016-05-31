@@ -7,40 +7,38 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	// "github.com/MerinEREN/InceIs/user"
 	"log"
 	"net/http"
 	"strings"
 )
 
 // CHANGE THIS DUMMY COOKIE STRUCT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-type sessionData struct {
-	Name  string
-	Value string
-}
-type logInData struct {
+type SessionData struct {
 	Photo string
 }
 
-// ADDING UUID, NECESSARY USER DATA, COUNT AND HASH TO THE COOKIE AND CHECK HASH CODE
-// CREATE logIn COOKIE AND SET PROFILE PIC !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-func Create(w http.ResponseWriter, r *http.Request, s, uuid string) {
+// ADDING UUID AND HASH TO THE COOKIE AND CHECK HASH CODE
+func Set(w http.ResponseWriter, r *http.Request, s, uuid string) (err error) {
 	// COOKIE IS A PART OF THE HEADER, SO U SHOULD SET THE COOKIE BEFORE EXECUTING A
 	// TEMPLATE OR WRITING SOMETHING TO THE BODY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	c, err := r.Cookie(s)
-	if err == http.ErrNoCookie {
-		c = newCookie(s, uuid)
-	}
-	if isUserDataChanged(c) {
-		// DELETING CORRUPTED COOKIE AND CREATING NEW ONE !!!!!!!!!!!!!!!!!!!!!!!!!
-		// c.MaxAge = -1
-		// http.SetCookie(w, c)
-		c = newCookie(s, uuid)
+	c, errC := r.Cookie(s)
+	if errC == http.ErrNoCookie {
+		c, err = create(s, uuid)
+	} else {
+		if isUserDataChanged(c) {
+			// DELETING CORRUPTED COOKIE AND CREATING NEW ONE !!!!!!!!!!!!!!!!!
+			// c.MaxAge = -1
+			// http.SetCookie(w, c)
+			c, err = create(s, uuid)
+		}
 	}
 	// CREATING A COOKIE IS NOT ENOUGH, YOU HAVE TO SET THE COOKIE TO USE IT !!!!!!!!!!
 	http.SetCookie(w, c)
+	return
 }
 
-func newCookie(s, uuid string) (c *http.Cookie) {
+func create(s, uuid string) (c *http.Cookie, err error) {
 	c = &http.Cookie{
 		Name: s,
 		// U CAN USE UUID AS VALUE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -55,63 +53,45 @@ func newCookie(s, uuid string) (c *http.Cookie) {
 		// BACKUPS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		// Value: "emil = merin@inceis.net" + "JSON data" + "whatever",
 		// IF SECURE IS TRUE THIS COOKIE ONLY SEND WITH HTTP2 !!!!!!!!!!!!!!!!!!!!!
-		Secure: true,
+		// Secure: true,
 		// HttpOnly: true MEANS JAVASCRIPT CAN NOT ACCESS THE COOKIE !!!!!!!!!!!!!!
 		HttpOnly: false,
 	}
-	setValue(c)
+	err = setValue(c)
 	return
 }
 
-func setValue(c *http.Cookie) {
-	// Setting different kind of struct for different cookies
+// Setting different kind of struct for different cookies
+func setValue(c *http.Cookie) (err error) {
 	var cd interface{}
 	switch c.Name {
 	case "session":
-		cd = sessionData{
-			Name:  "cookiedataName",
-			Value: "cookiedataValue",
-		}
-	case "logIn":
-		cd = logInData{
-			Photo: "userPhoto",
+		cd = SessionData{
+			Photo: "img/MKA.jpg",
 		}
 	}
-	bs, err := json.Marshal(cd)
+	var bs []byte
+	bs, err = json.Marshal(cd)
 	if err != nil {
-		log.Printf("%s cookie marshaling error. %v\n", c.Name, err)
+		return
 	}
-	log.Printf("Marshalled cookie data is %s\n", string(bs))
+	// log.Printf("Marshalled cookie data is %s\n", string(bs))
+	// log.Printf("Cookie value for "+c.Name+" is: %s\n", c.Value)
 	c.Value += "|" + base64.StdEncoding.EncodeToString(bs)
-	code := getCode(c.Value)
+	code := GetHmac(c.Value)
 	c.Value += "|" + code
-	fmt.Printf("Cookie value for "+c.Name+" is: %s\n", c.Value)
-}
-
-// Checking data with "hmac"
-func getCode(s string) string {
-	h := hmac.New(sha256.New, []byte("someKey"))
-	io.WriteString(h, s)
-	return fmt.Sprintf("%v", h.Sum(nil))
+	// log.Printf("Cookie value for "+c.Name+" is: %s\n", c.Value)
+	return
 }
 
 func isUserDataChanged(c *http.Cookie) bool {
 	cvSlice := strings.Split(c.Value, "|")
 	uuidData := cvSlice[0] + "|" + cvSlice[1]
-	returnedCode := getCode(uuidData)
+	returnedCode := GetHmac(uuidData)
 	if returnedCode != cvSlice[2] {
 		log.Printf("%s cookie value is corrupted. Cookie HMAC is %s, "+
 			"genereted HMAC is %s", c.Name, cvSlice[2], returnedCode)
-		decodedBase64, err := base64.StdEncoding.DecodeString(cvSlice[1])
-		if err != nil {
-			log.Printf("Error while decoding %s cookie data. Error "+
-				"is %v\n", c.Name, err)
-		}
-		var returnedCookieData sessionData
-		err = json.Unmarshal(decodedBase64, &returnedCookieData)
-		if err != nil {
-			log.Printf("%s cookie unmarshaling error. %v\n", c.Name, err)
-		}
+		returnedCookieData := decodeThanUnmarshall(cvSlice[1])
 		log.Printf("Returned cookie data is %v", returnedCookieData)
 		// DID NOT CHECKED DELETING AND CREATING NEW COOKIE YET, SO CHECK THEM !!!!
 
@@ -119,4 +99,47 @@ func isUserDataChanged(c *http.Cookie) bool {
 		return true
 	}
 	return false
+}
+
+// MAKE GENERIC RETURN TYPE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+func GetData(r *http.Request, s string) (*SessionData, error) {
+	c, err := r.Cookie(s)
+	if err == http.ErrNoCookie {
+		return &SessionData{}, err
+	}
+	cvSlice := strings.Split(c.Value, "|")
+	return decodeThanUnmarshall(cvSlice[1]), nil
+}
+
+// MAKE GENERIC RETURN TYPE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+func decodeThanUnmarshall(cd string) *SessionData {
+	decodedBase64, err := base64.StdEncoding.DecodeString(cd)
+	if err != nil {
+		log.Printf("Error while decoding cookie data. Error is %v\n", err)
+	}
+	var cookieData SessionData
+	err = json.Unmarshal(decodedBase64, &cookieData)
+	if err != nil {
+		log.Printf("Cookie data unmarshaling error. %v\n", err)
+	}
+	return &cookieData
+}
+
+func IsExists(r *http.Request, s string) bool {
+	_, err := r.Cookie(s)
+	return !(err == http.ErrNoCookie)
+}
+
+func GetHmac(i interface{}) string {
+	h := hmac.New(sha256.New, []byte("someKey"))
+	s, ok := i.(string)
+	if ok {
+		io.WriteString(h, s)
+	}
+	var r io.Reader
+	r, ok = i.(io.Reader)
+	if ok {
+		io.Copy(h, r)
+	}
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
