@@ -3,16 +3,16 @@ package inceis
 import (
 	// "fmt"
 	"encoding/json"
-	"github.com/MerinEREN/InceIs/account"
-	"github.com/MerinEREN/InceIs/cookie"
-	"github.com/MerinEREN/InceIs/page/content"
-	usr "github.com/MerinEREN/InceIs/user"
+	"github.com/MerinEREN/iiPackages/account"
+	"github.com/MerinEREN/iiPackages/cookie"
+	"github.com/MerinEREN/iiPackages/page/content"
+	usr "github.com/MerinEREN/iiPackages/user"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/memcache"
 	"google.golang.org/appengine/user"
 	// "io/ioutil"
-	"github.com/MerinEREN/InceIs/page/template"
+	"github.com/MerinEREN/iiPackages/page/template"
 	// "html/template"
 	"log"
 	// "mime/multipart"
@@ -58,7 +58,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request, s string) {
 		http.NotFound(w, r)
 		return
 	} */
-	// var pBody string // DELETE THIS WHEN YOU GET TEMPLATES FROM THE CLOUD STORAGE !!!!!
 	ctx := appengine.NewContext(r)
 	p := &content.Page{}
 	// IF PAGE ON MEMCACHE GET FROM THERE, OTHERWISE GET FROM DATASTORE =) !!!!!!!!!!!!
@@ -99,27 +98,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request, s string) {
 			return
 		}
 		p.D.LoginURL = url
-		/* pBody = `<!DOCTYPE html>
-				<html lang="en">
-				<head>
-					<meta charset="UTF-8">
-					<!--Import Google Icon Font-->
-		      			<link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-		      			<!--Import materialize.css-->
-		      			<link type="text/css" rel="stylesheet" href="/css/materialize.min.css"  media="screen,projection"/>
-					<!--Let browser know website is optimized for mobile-->
-		      			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-					<title>InceIs</title>
-				</head>
-				<body>
-					<h1>{{.C.Title}}</h1>
-					<a href="{{.D.LoginURL}}">Login With Google Account</a>
-		<!--Import jQuery before materialize.js-->
-		      	<script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
-		      	<script type="text/javascript" src="/js/lib/materialize.min.js"></script>
-				</body>
-				</html>` */
-		// http.Redirect(w, r, url, http.StatusFound)
+		template.RenderIndex(w, p)
 	} else {
 		acc := &account.Account{}
 		var errAc error
@@ -165,46 +144,13 @@ func indexHandler(w http.ResponseWriter, r *http.Request, s string) {
 		}
 		p.D.Account = acc
 		p.D.User = u2
-		/* pBody = `<!DOCTYPE html>
-				<html lang="en">
-				<head>
-					<meta charset="UTF-8">
-					<!--Import Google Icon Font-->
-		      			<link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-		      			<!--Import materialize.css-->
-		      			<link type="text/css" rel="stylesheet" href="/css/materialize.min.css"  media="screen,projection"/>
-					<!--Let browser know website is optimized for mobile-->
-		      			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-					<title>InceIs</title>
-				</head>
-				<body>
-					<h1>{{.C.Title}}</h1>
-					<h2>Hello {{.D.Account.Name}} =)</h2>
-					<h3>AND</h3>
-					<h2>Hello {{.D.User.Email}} =)</h2>
-					<h3>This is your account data below</h3>
-					<i>{{.D.Account}}</i>
-					<h3>AND</h3>
-					<h3>This is your user data below</h3>
-					<i>{{.D.User}}</i>
-					<br>
-					<br>
-					<a href="/accounts{{.D.URLUUID}}">Go to the accounts</a>
-					<br>
-					<br>
-					<a href="/logOut">Logout</a>
-		<!--Import jQuery before materialize.js-->
-		      	<script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
-		      	<script type="text/javascript" src="/js/lib/materialize.min.js"></script>
-				</body>
-				</html>` */
+		template.RenderAccount(w, p)
 	}
 	/* temp := template.Must(template.New("fdsfdfdf").Parse(pBody))
 	err = temp.Execute(w, p)
 	if err != nil {
 		log.Print(err)
 	} */
-	template.RenderIndex(w, p)
 	// THE IF CONTROL BELOW IS IMPORTANT
 	// WHEN PAGE LOADS THERE IS NO FILE SELECTED AND THIS CAUSE A PROBLEM FOR
 	/* if r.Method == "POST" {
