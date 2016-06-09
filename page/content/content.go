@@ -2,89 +2,78 @@ package content
 
 import (
 	"github.com/MerinEREN/InceIs/account"
-	"github.com/MerinEREN/InceIs/cookie"
+	// "github.com/MerinEREN/InceIs/cookie"
 	usr "github.com/MerinEREN/InceIs/user"
-	"io/ioutil"
-	"net/http"
+	// "io/ioutil"
+	//"net/http"
 )
 
 // II Language and page Sturcts
 // Languages colection
-/* type Languages []Language
+// STORE ALL OF THOSE IN TO THE DATASTORE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+type Languages []Language
 
 type Language struct {
-	Id    string `json:"id"` // EN, TR ...
-	pages []page `json:"pages"`
+	Id    string `datastore:"" json:"id"` // EN, TR ...
+	Pages []Page `datastore:"" json:"pages"`
 }
 
-type pages []page
+type Pages []Page
 
-type page struct {
-	Title string `json:"title"`
-	Body  Body `json:"body"`
-	// Templates maybe
+type Page struct {
+	C C `datastore:"" json:"content"`
+	D D `datastore:"" json:"data"`
+}
+
+type C struct {
+	Title string `datastore:"" json:"title"`
+	Body  Body   `datastore:"" json:"body"`
 }
 
 type Body struct {
-	Header Header `json:"header"`
+	Header Header `datastore:"" json:"header"`
 	// Others ...
-	Footer Footer `json:"footer"`
+	Footer Footer `datastore:"" json:"footer"`
 }
 
 type Header struct {
 	// Should be created their own types in the future !!!!!!!!!!!!!!!!!!!!
-	SearchPlaceHolder []byte `json:"searchPlaceHolder"`
-	MenuButtonText []byte `json:"menuButtonText"`
+	SearchPlaceHolder []byte `datastore:"" json:"searchPlaceHolder"`
+	MenuButtonText    []byte `datastore:"" json:"menuButtonText"`
 }
 
 type Footer struct {
 	// Should be created their own types in the future !!!!!!!!!!!!!!!!!!!!
-	SearchPlaceHolder []byte `json:"searchPlaceHolder"`
-	MenuButtonText []byte `json:"menuButtonText"`
-} */
+	SearchPlaceHolder []byte `datastore:"" json:"searchPlaceHolder"`
+	MenuButtonText    []byte `datastore:"" json:"menuButtonText"`
+}
+
+type D struct {
+	User     *usr.User        `datastore:"-" json:"user"`
+	Account  *account.Account `datastore:"-" json:"account"`
+	LoginURL string           `datastore:"-" json:"login_url"`
+	URLUUID  string           `datastore:"-" json:"url_uuid"`
+}
 
 /* func (p *page) save() error {
 	filename := p.Title + ".txt"
 	return ioutil.WriteFile(filename, p.Body, 0600)
 } */
 
-// Delete this dummy struct
-type Page struct {
-	Title       string           `json:"title"`
-	User        *usr.User        `json:"user"`
-	Body        []byte           `json:"body"`
-	Account     *account.Account `json:"account"`
-	Form        form             `json:"form"`
-	ProfilePic  string           `json:"profile_pic"`
-	RedirectURL string           `json:"redirect_url"`
-}
-
-type form struct {
-	Email    string `json:"email"`
-	Password []byte `json:"password"`
-}
-
-// GET CONTENT FROM PAGES COLLECTION AND COOKIES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// RETURN VALUE COULD BE CHANGE AS (interface{}, error) AT THE FUTURE !!!!!!!!!!!!!!!!!!!!!
-func Get(r *http.Request, title string) (*Page, error) {
-	filename := title + ".html"
+// GET PAGE CONTENTS FROM DATASTORE WITH USERS SELECTED LANGUAGE !!!!!!!!!!!!!!!!!!!!!!!!!!
+func Get(title string) (*Page, error) {
+	// filename := title + ".html"
 	//USE CURRENT WORKING DIRECTORY IN PATH !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	// BECAUSE ioutil.ReadFile USES CALLAR PACKAGE'S DIRECTORY AS CURRENT WORKING
 	// DIRECTORY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	body, err := ioutil.ReadFile("../page/templates/" + filename)
+	/* body, err := ioutil.ReadFile("../page/templates/" + filename)
 	if err != nil {
 		return nil, err
-	}
-	p := &Page{
-		Body:  body,
+	} */
+	content := C{
 		Title: title,
 	}
-	if title == "logIn" {
-		cd, errCookie := cookie.GetData(r, title)
-		if errCookie != http.ErrNoCookie {
-			pp := *cd
-			p.ProfilePic = pp.Photo
-		}
-	}
+	p := &Page{}
+	p.C = content
 	return p, nil
 }

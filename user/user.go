@@ -180,7 +180,8 @@ func Add(r *http.Request, parentKey *datastore.Key) (u *User, err error) {
 }
 
 func Exist(ctx context.Context, email string) (u *User, key *datastore.Key, err error) {
-	q := datastore.NewQuery("Users").Project("UUID", "Email")
+	// q := datastore.NewQuery("Users").Project("UUID", "Email")
+	q := datastore.NewQuery("Users")
 	for t := q.Run(ctx); ; {
 		u = &User{}
 		key, err = t.Next(u)

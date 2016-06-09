@@ -8,12 +8,13 @@ import (
 )
 
 var (
-	templates      = template.Must(template.ParseGlob("../page/templates/*.html"))
-	RenderIndex    = renderTemplate("index")
-	RenderSignUp   = renderTemplate("signUp")
-	RenderLogIn    = renderTemplate("logIn")
-	RenderAccounts = renderTemplate("accounts")
-	RenderAccount  = renderTemplate("account")
+	templates          = template.Must(template.ParseGlob("/templates/*.html"))
+	RenderIndex        = renderTemplate("index")
+	RenderUserSettings = renderTemplate("userSettings")
+	// RenderAccounts     = renderTemplate("accounts")
+	// RenderSignUp   = renderTemplate("signUp")
+	// RenderLogIn    = renderTemplate("logIn")
+	// RenderAccount  = renderTemplate("account")
 )
 
 func renderTemplate(title string) func(w http.ResponseWriter, p *content.Page) {

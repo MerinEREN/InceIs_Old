@@ -28,8 +28,8 @@ func Set(w http.ResponseWriter, r *http.Request, s, uuid string) (err error) {
 	} else {
 		if isUserDataChanged(c) {
 			// DELETING CORRUPTED COOKIE AND CREATING NEW ONE !!!!!!!!!!!!!!!!!
-			// c.MaxAge = -1
-			// http.SetCookie(w, c)
+			c.MaxAge = -1
+			http.SetCookie(w, c)
 			c, err = create(s, uuid)
 		}
 	}
@@ -93,9 +93,6 @@ func isUserDataChanged(c *http.Cookie) bool {
 			"genereted HMAC is %s", c.Name, cvSlice[2], returnedCode)
 		returnedCookieData := decodeThanUnmarshall(cvSlice[1])
 		log.Printf("Returned cookie data is %v", returnedCookieData)
-		// DID NOT CHECKED DELETING AND CREATING NEW COOKIE YET, SO CHECK THEM !!!!
-
-		// cookie.MaxAge = -1        // Decleration of deleting the cookie
 		return true
 	}
 	return false
