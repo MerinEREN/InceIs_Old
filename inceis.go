@@ -2,14 +2,13 @@ package inceis
 
 import (
 	// "fmt"
-	"encoding/json"
 	"github.com/MerinEREN/iiPackages/account"
 	"github.com/MerinEREN/iiPackages/cookie"
 	"github.com/MerinEREN/iiPackages/page/content"
 	usr "github.com/MerinEREN/iiPackages/user"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
-	"google.golang.org/appengine/memcache"
+	// "google.golang.org/appengine/memcache"
 	"google.golang.org/appengine/user"
 	// "io/ioutil"
 	"github.com/MerinEREN/iiPackages/page/template"
@@ -28,6 +27,7 @@ var (
 func init() {
 	http.Handle("/favicon.ico", http.NotFoundHandler())
 	http.HandleFunc("/", makeHandler(indexHandler))
+	http.HandleFunc("/roles", makeHandler(rolesHandler))
 	// http.HandleFunc("/signUp", makeHandler(signUpHandler))
 	// http.HandleFunc("/logIn", makeHandler(logInHandler))
 	// http.HandleFunc("/accounts", makeHandler(accountsHandler))
@@ -37,10 +37,10 @@ func init() {
 		http.Err(w, "Internal server error while login",
 			http.StatusBadRequest)
 	} */
-	/* fs := http.FileServer(http.Dir("../assets"))
+	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/css/", fs)
 	http.Handle("/img/", fs)
-	http.Handle("/js/", fs) */
+	http.Handle("/js/", fs)
 	/* log.Printf("About to listen on 10443. " +
 	"Go to https://192.168.1.100:10443/ " +
 	"or https://localhost:10443/") */
@@ -59,52 +59,29 @@ func indexHandler(w http.ResponseWriter, r *http.Request, s string) {
 		return
 	} */
 	ctx := appengine.NewContext(r)
-	p := &content.Page{}
-	// IF PAGE ON MEMCACHE GET FROM THERE, OTHERWISE GET FROM DATASTORE =) !!!!!!!!!!!!
-	pageItem, err := memcache.Get(ctx, "pageItem")
-	if err == memcache.ErrCacheMiss {
-		p, err = content.Get(s)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		var bs []byte
-		bs, err = json.Marshal(p)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		pageItem = &memcache.Item{
-			Key:   "pageItem",
-			Value: bs,
-		}
-		if err = memcache.Set(ctx, pageItem); err != nil {
-			log.Println(err)
-		}
-	} else {
-		err = json.Unmarshal(pageItem.Value, &p)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-
 	u1 := user.Current(ctx)
+	p := new(content.Page)
 	if u1 == nil {
-		var url string
-		url, err = user.LoginURL(ctx, r.URL.String())
+		url, err := user.LoginURL(ctx, r.URL.String())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+		p, err = content.Get(ctx, "index")
+		if p == nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err != nil {
+			log.Printf("Error while getting index page content. Error: %v\n",
+				err)
 		}
 		p.D.LoginURL = url
 		template.RenderIndex(w, p)
 	} else {
-		acc := &account.Account{}
+		acc := new(account.Account)
 		var errAc error
-		var u2 *usr.User
-		var uKey *datastore.Key
-		u2, uKey, err = usr.Exist(ctx, u1.Email)
+		u2, uKey, err := usr.Exist(ctx, u1.Email)
 		switch err {
 		case datastore.Done:
 			acc, u2, errAc = account.Create(r)
@@ -116,7 +93,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request, s string) {
 				return
 			}
 		case usr.ExistingEmail:
-			// GET USERS ACCOUNT DATA AND USE THEM INSTEAD OF USERS !!!!!!!!!!!
 			aKey := uKey.Parent()
 			// log.Println(uKey, aKey, acc)
 			errAc = datastore.Get(ctx, aKey, acc)
@@ -133,6 +109,15 @@ func indexHandler(w http.ResponseWriter, r *http.Request, s string) {
 			// ALSO LOG THIS WHITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+		p, err = content.Get(ctx, "account")
+		if p == nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err != nil {
+			log.Printf("Error while getting account page content. Error: %v\n",
+				err)
 		}
 		if err = cookie.Set(w, r, "session", u2.UUID); err != nil {
 			// CHECK FOR DISABLED COOKIE CLIENTS
@@ -169,6 +154,46 @@ func indexHandler(w http.ResponseWriter, r *http.Request, s string) {
 		}
 		fmt.Fprintf(w, "File: %s\n Error: %v\n", string(bs), err)
 	} */
+}
+
+func rolesHandler(w http.ResponseWriter, r *http.Request, s string) {
+	ctx := appengine.NewContext(r)
+	u1 := user.Current(ctx)
+	if u1 == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+	} else {
+		u2, uKey, err := usr.Exist(ctx, u1.Email)
+		if err == usr.FindUserError {
+			log.Printf("Error while login user: %v\n", err)
+			// ALSO LOG THIS WHITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		// CHECK USER ROLES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		acc := new(account.Account)
+		aKey := uKey.Parent()
+		err = datastore.Get(ctx, aKey, acc)
+		if err != nil {
+			log.Printf("Error while getting user's account data: %v\n",
+				err)
+			// ALSO LOG THIS WHITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!
+			http.Error(w, err.Error(),
+				http.StatusInternalServerError)
+			return
+		}
+		p := new(content.Page)
+		p, err = content.Get(ctx, "roles")
+		if p == nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err != nil {
+			log.Printf("Error while getting page content. Error: %v\n", err)
+		}
+		p.D.Account = acc
+		p.D.User = u2
+		template.RenderRoles(w, p)
+	}
 }
 
 /* func signUpHandler(w http.ResponseWriter, r *http.Request, s string) {
@@ -290,6 +315,9 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request,
 		case "/":
 			// cookie.Set(w, r, "index", nil)
 			fn(w, r, "index")
+		case "/roles":
+			// cookie.Set(w, r, "roles", nil)
+			fn(w, r, "roles")
 		case "/signUp":
 			// cookie.Set(w, r, "signUp", nil)
 			fn(w, r, "signUp")
