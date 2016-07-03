@@ -1,0 +1,45 @@
+{{define "topNav"}}
+	<nav class="blue lighten-1" role="navigation">
+{{end}}
+{{define "body"}}
+<div class="col s12 m12 l6 offset-l3">
+	<div class="section">	
+		<h1>{{.C.Title}}</h1>
+	</div>
+	<div class="divider"></div>
+	<div class="section">	
+		<div class="row">
+			<div class="col s12 m5 l5">
+				<h2>Hello {{.D.Account.Name}} =)</h2>
+			</div>
+			<div class="col s12 m2 l2 center-align">
+				<h3>AND</h3>
+			</div>
+			<div class="col s12 m5 l5">
+				<h2 class="truncate">Hello {{.D.User.Email}} =)</h2>
+			</div>
+		</div>
+	</div>
+	<div class="section">	
+		<div class="row">
+			<div class="col s12 m5 l5">
+				<h3>This is your account data below</h3>
+				<i>{{.D.Account}}</i>
+			</div>
+			<div class="col s12 m2 l2 center-align">
+				<h3>AND</h3>
+			</div>
+			<div class="col s12 m5 l5">
+				<h3>This is your user data below</h3>
+				<i>{{.D.User}}</i>
+			</div>
+		</div>
+	</div>
+	<div class="section">	
+		<h1 class="truncate">Fuck Yeaaaaaaahhhhhhh =)</h1>
+	</div>
+	<!-- <div class="section">	
+	    <a href="/accounts{{.D.URLUUID}}" class="hoverable">Go to the accounts</a>
+	    </div> -->
+</div>
+{{end}}
