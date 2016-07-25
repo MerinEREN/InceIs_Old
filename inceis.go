@@ -1,7 +1,7 @@
 package inceis
 
 import (
-	// "fmt"
+	"fmt"
 	"github.com/MerinEREN/iiPackages/account"
 	"github.com/MerinEREN/iiPackages/cookie"
 	"github.com/MerinEREN/iiPackages/page/content"
@@ -28,6 +28,8 @@ func init() {
 	http.Handle("/favicon.ico", http.NotFoundHandler())
 	http.HandleFunc("/", makeHandler(indexHandler))
 	http.HandleFunc("/roles", makeHandler(rolesHandler))
+	http.HandleFunc("/userSettings", makeHandler(userSettingsHandler))
+	http.HandleFunc("/accountSettings", makeHandler(accountSettingsHandler))
 	// http.HandleFunc("/signUp", makeHandler(signUpHandler))
 	// http.HandleFunc("/logIn", makeHandler(logInHandler))
 	// http.HandleFunc("/accounts", makeHandler(accountsHandler))
@@ -87,7 +89,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request, s string) {
 			acc, u2, errAc = account.Create(r)
 			if errAc != nil {
 				log.Printf("Error while creating account: %v\n", errAc)
-				// ALSO LOG THIS WHITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!
+				// ALSO LOG THIS WITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!
 				http.Error(w, errAc.Error(),
 					http.StatusInternalServerError)
 				return
@@ -99,14 +101,14 @@ func indexHandler(w http.ResponseWriter, r *http.Request, s string) {
 			if errAc != nil {
 				log.Printf("Error while getting user's account data: %v\n",
 					errAc)
-				// ALSO LOG THIS WHITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!
+				// ALSO LOG THIS WITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!
 				http.Error(w, errAc.Error(),
 					http.StatusInternalServerError)
 				return
 			}
 		case usr.FindUserError:
 			log.Printf("Error while login user: %v\n", err)
-			// ALSO LOG THIS WHITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			// ALSO LOG THIS WITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -130,6 +132,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request, s string) {
 		p.D.Account = acc
 		p.D.User = u2
 		template.RenderAccount(w, p)
+		// log.Printf("Selected language by user is %s", r.FormValue("lang"))
 	}
 	/* temp := template.Must(template.New("fdsfdfdf").Parse(pBody))
 	err = temp.Execute(w, p)
@@ -165,24 +168,83 @@ func rolesHandler(w http.ResponseWriter, r *http.Request, s string) {
 		u2, uKey, err := usr.Exist(ctx, u1.Email)
 		if err == usr.FindUserError {
 			log.Printf("Error while login user: %v\n", err)
-			// ALSO LOG THIS WHITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			// ALSO LOG THIS WITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		// CHECK USER ROLES !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		if u2.Type == "inHouse" && u2.Status != "frozen" && (u2.IsAdmin() || u2.IsContentEditor()) {
+			acc := new(account.Account)
+			aKey := uKey.Parent()
+			err = datastore.Get(ctx, aKey, acc)
+			if err != nil {
+				log.Printf("Error while getting user's account data: %v\n",
+					err)
+				// ALSO LOG THIS WITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!
+				http.Error(w, err.Error(),
+					http.StatusInternalServerError)
+				return
+			}
+			p := new(content.Page)
+			p, err = content.Get(ctx, s)
+			if p == nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if err != nil {
+				log.Printf("Error while getting page content. Error: %v\n", err)
+			}
+			p.D.Account = acc
+			p.D.User = u2
+			template.RenderRoles(w, p)
+			// keyValue := *role
+			// log.Println(keyValue)
+			// log.Println(role.StringID())
+			// log.Println(role.IntID())
+			// log.Println(role.Parent())
+			// log.Println(role.AppID())
+			// log.Println(role.Kind())
+			// log.Println(role.Namespace())
+		} else {
+			log.Printf("Unauthorized user %s trying to see "+
+				"roles page !!!", u2.Email)
+			fmt.Fprintf(w, "Permission denied !!!")
+			return
+		}
+	}
+}
+
+func userSettingsHandler(w http.ResponseWriter, r *http.Request, s string) {
+	ctx := appengine.NewContext(r)
+	u1 := user.Current(ctx)
+	if u1 == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+	} else {
+		u2, uKey, err := usr.Exist(ctx, u1.Email)
+		if err == usr.FindUserError {
+			log.Printf("Error while login user: %v\n", err)
+			// ALSO LOG THIS WITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if u2.Status == "frozen" {
+			log.Printf("Unauthorized user %s trying to see "+
+				"user settings page !!!", u2.Email)
+			fmt.Fprintf(w, "Permission denied !!!")
+			return
+		}
 		acc := new(account.Account)
 		aKey := uKey.Parent()
 		err = datastore.Get(ctx, aKey, acc)
 		if err != nil {
 			log.Printf("Error while getting user's account data: %v\n",
 				err)
-			// ALSO LOG THIS WHITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!
+			// ALSO LOG THIS WITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!
 			http.Error(w, err.Error(),
 				http.StatusInternalServerError)
 			return
 		}
 		p := new(content.Page)
-		p, err = content.Get(ctx, "roles")
+		p, err = content.Get(ctx, s)
 		if p == nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -192,7 +254,52 @@ func rolesHandler(w http.ResponseWriter, r *http.Request, s string) {
 		}
 		p.D.Account = acc
 		p.D.User = u2
-		template.RenderRoles(w, p)
+		template.RenderUserSettings(w, p)
+	}
+}
+
+func accountSettingsHandler(w http.ResponseWriter, r *http.Request, s string) {
+	ctx := appengine.NewContext(r)
+	u1 := user.Current(ctx)
+	if u1 == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+	} else {
+		u2, uKey, err := usr.Exist(ctx, u1.Email)
+		if err == usr.FindUserError {
+			log.Printf("Error while login user: %v\n", err)
+			// ALSO LOG THIS WITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if u2.Status == "frozen" || !u2.IsAdmin() {
+			log.Printf("Unauthorized user %s trying to see "+
+				"account settings page !!!", u2.Email)
+			fmt.Fprintf(w, "Permission denied !!!")
+			return
+		}
+		acc := new(account.Account)
+		aKey := uKey.Parent()
+		err = datastore.Get(ctx, aKey, acc)
+		if err != nil {
+			log.Printf("Error while getting user's account data: %v\n",
+				err)
+			// ALSO LOG THIS WITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!
+			http.Error(w, err.Error(),
+				http.StatusInternalServerError)
+			return
+		}
+		p := new(content.Page)
+		p, err = content.Get(ctx, s)
+		if p == nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err != nil {
+			log.Printf("Error while getting page content. Error: %v\n", err)
+		}
+		p.D.Account = acc
+		p.D.User = u2
+		template.RenderAccountSettings(w, p)
 	}
 }
 
@@ -208,7 +315,7 @@ func rolesHandler(w http.ResponseWriter, r *http.Request, s string) {
 		acc, UUID, err := account.Create(r)
 		if err != nil {
 			log.Printf("Error while creating account: %v\n", err)
-			// ALSO LOG THIS WHITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			// ALSO LOG THIS WITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -287,8 +394,7 @@ func logOutHandler(w http.ResponseWriter, r *http.Request, s string) {
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
-func makeHandler(fn func(http.ResponseWriter, *http.Request,
-	string)) http.HandlerFunc {
+func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		m := validPath.FindStringSubmatch(r.URL.Path)
 		if m == nil {
@@ -314,15 +420,14 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request,
 		switch r.URL.Path {
 		case "/":
 			// cookie.Set(w, r, "index", nil)
-			fn(w, r, "index")
+			fn(w, r, "")
 		case "/roles":
 			// cookie.Set(w, r, "roles", nil)
 			fn(w, r, "roles")
-		case "/signUp":
-			// cookie.Set(w, r, "signUp", nil)
-			fn(w, r, "signUp")
-		case "/logIn":
-			fn(w, r, "logIn")
+		case "/userSettings":
+			fn(w, r, "userSettings")
+		case "/accountSettings":
+			fn(w, r, "accountSettings")
 		case "/logOut":
 			fn(w, r, "session")
 		case "/accounts":

@@ -1,0 +1,75 @@
+{{define "body"}}
+<div class="row">
+	<div class="col  s12 m12 l3 hide-on-med-and-small">
+		<ul id="nav-mobile" class="side-nav fixed" style="margin-top: 64px">
+			<li>
+				<div class="card z-depth-0" style="margin-top: 0px">
+					<div class="card-image waves-effect waves-block waves-light">
+						<img class="activator" src="/img/{{.D.Account.Photo}}">
+					</div>
+					<div class="card-content">
+						<span class="card-title activator grey-text text-darken-4">{{.D.Account.Name}}<i class="material-icons right">more_vert</i></span>
+						<p><a href="/">Home</a></p>
+					</div>
+					<div class="card-reveal">
+						<span class="card-title grey-text text-darken-4">{{.D.Account.Name}}<i class="material-icons right">close</i></span>
+						<p>Here is some more information about this product that is only revealed once clicked on.</p>
+					</div>
+				</div>
+			</li>
+			{{if eq .D.User.Type "inHouse" | and (or .D.User.IsAdmin .D.User.IsContentEditor)}}<li><a href="/roles">Roles</a></li>{{end}}
+			<li><a href="#!">Second Sidebar Link</a></li>
+			<li><a href="#!">Third Sidebar Link</a></li>
+			<li class="no-padding">
+				<ul class="collapsible collapsible-accordion">
+					<li>
+						<a class="collapsible-header">Dropdown 1<i class="mdi-navigation-arrow-drop-down"></i></a>
+						<div class="collapsible-body">
+							<ul>
+								<li><a href="#!">First</a></li>
+								<li><a href="#!">Second</a></li>
+								<li><a href="#!">Third</a></li>
+								<li><a href="#!">Fourth</a></li>
+							</ul>
+						</div>
+					</li>
+				</ul>
+			</li>
+			<li><a href="#!">Fourth Sidebar Link</a></li>
+			<li><a href="#!">Fifth Sidebar Link</a></li>
+			<li class="no-padding">
+				<ul class="collapsible collapsible-accordion">
+					<li>
+						<a class="collapsible-header">Dropdown 2<i class="mdi-navigation-arrow-drop-down"></i></a>
+						<div class="collapsible-body">
+							<ul>
+								<li><a href="#!">First</a></li>
+								<li><a href="#!">Second</a></li>
+								<li><a href="#!">Third</a></li>
+								<li><a href="#!">Fourth</a></li>
+							</ul>
+						</div>
+					</li>
+				</ul>
+			</li>
+			<li><a href="#!">Sixth Sidebar Link</a></li>
+			<li class="no-padding">
+				<ul class="collapsible collapsible-accordion">
+					<li>
+						<a class="collapsible-header">Dropdown 3<i class="mdi-navigation-arrow-drop-down"></i></a>
+						<div class="collapsible-body">
+							<ul>
+								<li><a href="#!">First</a></li>
+								<li><a href="#!">Second</a></li>
+								<li><a href="#!">Third</a></li>
+								<li><a href="#!">Fourth</a></li>
+							</ul>
+						</div>
+					</li>
+				</ul>
+			</li>
+		</ul>
+	</div>
+	{{template "pageBody" .}}
+</div>
+{{end}}
