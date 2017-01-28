@@ -8,7 +8,6 @@ up the detailed documentation that follows.
 package inceis
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/MerinEREN/iiPackages/account"
 	"github.com/MerinEREN/iiPackages/cookie"
@@ -25,7 +24,6 @@ import (
 	// "mime/multipart"
 	"net/http"
 	"regexp"
-	"time"
 )
 
 var _ memcache.Item // For debugging, delete when done.
@@ -35,15 +33,9 @@ var (
 	validPath = regexp.MustCompile("^/|[/A-Za-z0-9]$")
 )
 
-// type LoginURLs map[string]string
-
 func init() {
 	// http.Handle("/favicon.ico", http.NotFoundHandler())
-	http.Handle("/",
-		http.TimeoutHandler(http.HandlerFunc(makeHandlerFunc(indexHandler)),
-			130*time.Millisecond,
-			"This is http.TimeoutHandler(handler, time.Duration, message) "+
-				"message bitch =)"))
+	http.HandleFunc("/", makeHandlerFunc(indexHandler))
 	http.HandleFunc("/roles/", makeHandlerFunc(rolesHandler))
 	http.HandleFunc("/userSettings/", makeHandlerFunc(userSettingsHandler))
 	http.HandleFunc("/accountSettings/", makeHandlerFunc(accountSettingsHandler))
@@ -74,90 +66,50 @@ func init() {
 func indexHandler(w http.ResponseWriter, r *http.Request, s string) {
 	// The "/" pattern matches everything, so we need to check
 	// that we're at the root here.
-	if r.URL.Path == "/favicon.ico" {
-		return
-	} else if r.URL.Path != "/" {
+	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
-	ctx := appengine.NewContext(r)
-	p, err := content.Get(ctx, s)
-	if p == nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if err != nil {
-		log.Printf("Error while getting %s page content. Error: %v\n", s,
-			err)
-	}
-	u1 := user.Current(ctx)
-	currentOAuth, _ := user.CurrentOAuth(ctx, "")
-	isAdmin := user.IsAdmin(ctx)
-	oAuthConsumerKey, err := user.OAuthConsumerKey(ctx)
-	log.Println(u1, currentOAuth, isAdmin, oAuthConsumerKey, err)
-	// Login or get data needed
-	if u1 == nil {
-		switch r.Method {
-		case "POST":
-			gURL, err := user.LoginURL(ctx, r.URL.String())
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			loginURLs := make(map[string]string)
-			loginURLs["Google"] = gURL
-			loginURLs["LinkedIn"] = gURL
-			loginURLs["Twitter"] = gURL
-			loginURLs["Facebook"] = gURL
-			// http.Error(w, "Google login URL =)",
-			//http.StatusInternalServerError)
-			// http.NotFound(w, r)
-			// http.Redirect(w, r, "/MerinEREN", http.StatusFound)
-			// log.Println(r.BasicAuth())
-			// log.Println(r.RemoteAddr)
-			// log.Println(r.URL)
-			// log.Println(r.TLS)
-			// log.Println(r.Close)
-			// log.Println(r.RequestURI)
-			// log.Println(http.ProxyFromEnvironment(r))
-			// log.Println(r.Referer())
-			// log.Println(r.Cookies())
-			// log.Printf("Request method is %v\n", r.Method)
-			// _ = r.Write(w)
-			// w.Flush()
-			// log.Println(w.Header())
-			// w.Header().Set("Content-Type", "application/json")
-			// contentLength, err := w.Write([]byte(fmt.Sprintf("%v", p.D)))
-			// log.Println(contentLength, err)
-			/* t := &http.Transport{}
-			t.RegisterProtocol("file", http.NewFileTransport(http.Dir("/")))
-			c := &http.Client{Transport: t}
-			res, err := c.Get("file:///etc/passwd")
-			log.Println(res, err) */
-			// When u get request with Body
-			// defer r.Body.Close()
-			// to read the request Body
-			// b, err := ioutil.ReadAll(r.Body)
-			// if err != nil {
-			// http.Error(w, "Error reading body", http.StatusBadRequest)
-			// return
-			// }
-			// To respond to request without any data
-			// w.WriteHeader(StatusOK)
-			b, err := json.Marshal(loginURLs)
-			if err != nil {
-				log.Println(err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			// w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			w.Write(b)
-		default:
-			template.RenderIndex(w, p)
+	switch r.Method {
+	case "POST":
+		// http.Error(w, "Google login URL =)", http.StatusInternalServerError)
+		// http.NotFound(w, r)
+		// http.Redirect(w, r, "/MerinEREN", http.StatusFound)
+		log.Println(r.BasicAuth())
+		log.Println(r.RemoteAddr)
+		log.Println(r.URL)
+		log.Println(r.TLS)
+		log.Println(r.Cancel)
+		log.Println(r.Close)
+		log.Println(r.RequestURI)
+		log.Println(http.ProxyFromEnvironment(r))
+		log.Println(r.Referer())
+		log.Println(r.Cookies())
+		log.Printf("Request method is %v\n", r.Method)
+		// _ = r.Write(w)
+		// w.Flush()
+	default:
+		ctx := appengine.NewContext(r)
+		pc, err := content.Get(ctx, s)
+		if pc == nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
-	} else {
-		switch r.Method {
-		case "POST":
+		if err != nil {
+			log.Printf("Error while getting %s page content. Error: %v\n", s,
+				err)
+		}
+		u1 := user.Current(ctx)
+		// Login or get data needed
+		if u1 == nil {
+			url, err := user.LoginURL(ctx, r.URL.String())
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			LoginURL := url
+			log.Println(LoginURL)
+		} else {
 			acc := new(account.Account)
 			u2, uKey, err := usr.Exist(ctx, u1.Email)
 			switch err {
@@ -191,64 +143,49 @@ func indexHandler(w http.ResponseWriter, r *http.Request, s string) {
 			if err = cookie.Set(w, r, "session", u2.UUID); err != nil {
 				// CHECK FOR DISABLED COOKIE CLIENTS
 				if _, err = r.Cookie(s); err == http.ErrNoCookie {
-					p.D.URLUUID = "?uuid=" + u2.UUID
+					pc.D.URLUUID = "?uuid=" + u2.UUID
 					// ALSO SET URL PATH WITH UUID !!!!!!!!!!!!!!!!!!!!
 				}
 				log.Printf("Error while creating session cookie: %v\n",
 					err)
 			}
-			p.D.Account = acc
-			p.D.User = u2
-			p.D.LogoutURL, err = user.LogoutURL(ctx, "/")
-			if err != nil {
-				log.Println(err)
-				// CHANGE http.Status.....Error !!!!!!!!!!!!!!!!!!!!!!!!!!!
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+			pc.D.Account = acc
+			pc.D.User = u2
 			// log.Printf("Selected language by user is %s",
 			// r.FormValue("lang"))
-			b, err := json.Marshal(p.D)
+		}
+		/* temp := template.Must(template.New("fdsfdfdf").Parse(pBody))
+		err = temp.Execute(w, p)
+		if err != nil {
+			log.Print(err)
+		} */
+		// THE IF CONTROL BELOW IS IMPORTANT
+		// WHEN PAGE LOADS THERE IS NO FILE SELECTED AND THIS CAUSE A PROBLEM FOR
+		/* if r.Method == "POST" {
+			var f multipart.File
+			key := "uploadedFile"
+			f, _, err := r.FormFile(key)
 			if err != nil {
-				log.Println(err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				fmt.Println("File input is empty.")
 				return
 			}
-			w.Write(b)
-		default:
-			template.RenderIndex(w, p)
-		}
+			defer f.Close()
+			var bs []byte
+			bs, err = ioutil.ReadAll(f)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Fprintf(w, "File: %s\n Error: %v\n", string(bs), err)
+		} */
+		// w.Write([]byte(pc.D))
+		w.Write([]byte(fmt.Printf("%v", pc)))
+		template.RenderIndex(w, pc)
 	}
-	/* temp := template.Must(template.New("fdsfdfdf").Parse(pBody))
-	err = temp.Execute(w, p)
-	if err != nil {
-		log.Print(err)
-	} */
-	// THE IF CONTROL BELOW IS IMPORTANT
-	// WHEN PAGE LOADS THERE IS NO FILE SELECTED AND THIS CAUSE A PROBLEM FOR
-	/* if r.Method == "POST" {
-		var f multipart.File
-		key := "uploadedFile"
-		f, _, err := r.FormFile(key)
-		if err != nil {
-			fmt.Println("File input is empty.")
-			return
-		}
-		defer f.Close()
-		var bs []byte
-		bs, err = ioutil.ReadAll(f)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Fprintf(w, "File: %s\n Error: %v\n", string(bs), err)
-	} */
-	// w.Write([]byte(p.D))
 }
 
 func rolesHandler(w http.ResponseWriter, r *http.Request, s string) {
 	ctx := appengine.NewContext(r)
 	u1 := user.Current(ctx)
-	log.Println(ctx, u1)
 	if u1 == nil {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	} else {
