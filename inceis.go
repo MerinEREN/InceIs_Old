@@ -10,6 +10,7 @@ package inceis
 import (
 	// "encoding/json"
 	// "fmt"
+	"strings"
 	// "github.com/MerinEREN/iiPackages/account"
 	"github.com/MerinEREN/iiPackages/apis/account"
 	"github.com/MerinEREN/iiPackages/apis/accountSettings"
@@ -20,6 +21,7 @@ import (
 	// "github.com/MerinEREN/iiPackages/cookie"
 	"github.com/MerinEREN/iiPackages/page/content"
 	"github.com/MerinEREN/iiPackages/page/template"
+	"golang.org/x/net/context"
 	// usr "github.com/MerinEREN/iiPackages/user"
 	"google.golang.org/appengine"
 	// "google.golang.org/appengine/datastore"
@@ -31,7 +33,7 @@ import (
 	// "mime/multipart"
 	"net/http"
 	// "regexp"
-	"time"
+	// "time"
 )
 
 var _ memcache.Item // For debugging, delete when done.
@@ -50,13 +52,14 @@ func init() {
 			1000*time.Millisecond,
 			"This is http.TimeoutHandler(handler, time.Duration, message) "+
 				"message bitch =)"))
+	// http.HandleFunc("/", makeHandlerFunc(index.Handler))
 	http.HandleFunc("/roles/", makeHandlerFunc(roles.Handler))
 	http.HandleFunc("/userSettings/", makeHandlerFunc(userSettings.Handler))
 	http.HandleFunc("/accountSettings/", makeHandlerFunc(accountSettings.Handler))
 	// http.HandleFunc("/signUp", makeHandlerFunc(signUpHandler))
 	// http.HandleFunc("/logIn", makeHandlerFunc(logInHandler))
 	// http.HandleFunc("/accounts", makeHandlerFunc(accountsHandler))
-	http.HandleFunc("/accounts/", account.Handler)
+	http.HandleFunc("/accounts/", makeHandlerFunc(account.Handler))
 	http.HandleFunc("/logout/", makeHandlerFunc(logout.Handler))
 	/* if http.PostForm("/logIn", data); err != nil {
 		http.Err(w, "Internal server error while login",
@@ -76,28 +79,6 @@ func init() {
 	// ListenAndServe and ListenAndServeTLS always returns a non-nil error !!!
 	// log.Fatal(err)
 }
-
-/* func signUpHandler(w http.ResponseWriter, r *http.Request, s string) {
-	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte("This is Sign Up page " + s + "\n"))
-	p, err := content.Get(r, s)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if r.Method == "POST" {
-		acc, UUID, err := account.Create(r)
-		if err != nil {
-			log.Printf("Error while creating account: %v\n", err)
-			// ALSO LOG THIS WITH DATASTORE LOG !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		cookie.Set(w, r, "session", UUID)
-		http.Redirect(w, r, "/accounts/"+acc.Name, 302)
-	}
-	template.RenderSignUp(w, p)
-} */
 
 /* func logInHandler(w http.ResponseWriter, r *http.Request, s string) {
 	p, err := content.Get(r, s)
@@ -135,29 +116,17 @@ func init() {
 	template.RenderLogIn(w, p)
 } */
 
-/* func accountsHandler(w http.ResponseWriter, r *http.Request, s string) {
-	p, err := content.Get(r, s)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	template.RenderAccounts(w, p)
-} */
+type handlerFuncWithContextAndUser func(context.Context, http.ResponseWriter,
+	*http.Request, *user.User)
 
-/* func accountHandler(w http.ResponseWriter, r *http.Request, s string) {
-	// w.Header.Set("Location", url)
-	// w.WriteHeader(http.StatusFound)
-	template.RenderAccount(w, p)
-} */
-
-func makeHandlerFunc(fn http.HandlerFunc) http.HandlerFunc {
-	// var pageName string
+func makeHandlerFunc(fn handlerFuncWithContextAndUser) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := appengine.NewContext(r)
+		// Authenticate the client
 		// ug is google user
 		ug := user.Current(ctx)
-		if ug == nil {
-			http.Redirect(w, r, "/", http.StatusUnauthorized)
+		if ug == nil && r.URL.Path != "/" {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
 		}
 		/* m := validPath.FindStringSubmatch(r.URL.Path)
 		if m == nil {
@@ -167,44 +136,19 @@ func makeHandlerFunc(fn http.HandlerFunc) http.HandlerFunc {
 		} */
 		/* for _, val := range m {
 			fmt.Println(val)
-		}
-		switch len(m) {
-		case 2:
-			cookie.Set(w, r, m[1])
-			fn(w, r, m[1])
-		case 3:
-			cookie.Set(w, r, m[2])
-			fn(w, r, m[2])
-		default:
-			cookie.Set(w, r, "index")
-			fn(w, r, "index")
-		} */
-		/* switch r.URL.Path {
-		case "/":
-			pageName = "index"
-		case "/roles/":
-			pageName = "roles"
-		case "/userSettings/":
-			pageName = "userSettings"
-		case "/accountSettings/":
-			pageName = "accountSettings"
-		case "/logout/":
-			pageName = "logout"
-		case "/accounts":
-			pageName = "accounts"
-		case "/accounts/":
-			pageName = "account"
-		default:
-			// !!!!!!!!!!!!!!!!!!!!
-		} */
-		go fn(w, r)
+		}*/
 		// CHANGE CONTENT AND TEMPLATE THINGS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		pc, err := content.Get(ctx, "index")
-		if err != nil {
-			log.Printf("Error while getting page content. Error: %v\n", err)
-		}
-		if !template.TemplateRendered {
+		if strings.Contains(r.Header.Get("Accept"), "text/html") {
+			pc, err := content.Get(ctx, "index")
+			if err != nil {
+				log.Printf("Error while getting page content. Error: %v\n",
+					err)
+			}
+			log.Println("Getting template !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 			template.RenderIndex(w, pc)
+		} else if strings.Contains(r.Header.Get("Accept"), "text/plain") {
+			log.Println("Getting data !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+			fn(ctx, w, r, ug)
 		}
 	}
 }
