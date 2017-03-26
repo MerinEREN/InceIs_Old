@@ -19,7 +19,6 @@ import (
 	"github.com/MerinEREN/iiPackages/apis/roles"
 	"github.com/MerinEREN/iiPackages/apis/userSettings"
 	// "github.com/MerinEREN/iiPackages/cookie"
-	"github.com/MerinEREN/iiPackages/page/content"
 	"github.com/MerinEREN/iiPackages/page/template"
 	"golang.org/x/net/context"
 	// usr "github.com/MerinEREN/iiPackages/user"
@@ -139,13 +138,8 @@ func makeHandlerFunc(fn handlerFuncWithContextAndUser) http.HandlerFunc {
 		}*/
 		// CHANGE CONTENT AND TEMPLATE THINGS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		if strings.Contains(r.Header.Get("Accept"), "text/html") {
-			pc, err := content.Get(ctx, "index")
-			if err != nil {
-				log.Printf("Error while getting page content. Error: %v\n",
-					err)
-			}
 			log.Println("Getting template !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-			template.RenderIndex(w, pc)
+			template.RenderIndex(w)
 		} else if strings.Contains(r.Header.Get("Accept"), "text/plain") {
 			log.Println("Getting data !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 			fn(ctx, w, r, ug)
