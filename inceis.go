@@ -14,6 +14,7 @@ import (
 	// "github.com/MerinEREN/iiPackages/account"
 	"github.com/MerinEREN/iiPackages/apis/account"
 	"github.com/MerinEREN/iiPackages/apis/accountSettings"
+	"github.com/MerinEREN/iiPackages/apis/demand"
 	"github.com/MerinEREN/iiPackages/apis/index"
 	"github.com/MerinEREN/iiPackages/apis/logout"
 	"github.com/MerinEREN/iiPackages/apis/roles"
@@ -52,6 +53,7 @@ func init() {
 			"This is http.TimeoutHandler(handler, time.Duration, message) "+
 				"message bitch =)"))
 	// http.HandleFunc("/", makeHandlerFunc(index.Handler))
+	http.HandleFunc("/demand/", makeHandlerFunc(demand.Handler))
 	http.HandleFunc("/roles/", makeHandlerFunc(roles.Handler))
 	http.HandleFunc("/userSettings/", makeHandlerFunc(userSettings.Handler))
 	http.HandleFunc("/accountSettings/", makeHandlerFunc(accountSettings.Handler))
